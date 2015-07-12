@@ -45,9 +45,9 @@ case "$1" in
     ID=$(docker run -d luxifer/redis /bin/bash "exit 0")
     docker wait $ID > /dev/null
     IMAGE=$(docker commit $ID)
-    docker tag $IMAGE $REDIS_IMAGE
+    docker tag $IMAGE "$REDIS_IMAGE":latest
     # Launch container
-    ID=$(docker run -v $VOLUME -p 6379 -d $REDIS_IMAGE /bin/start_redis.sh)
+    ID=$(docker run -v $VOLUME -d "$REDIS_IMAGE":latest /bin/start_redis.sh)
     sleep 4
     # Link to a potential existing app
     dokku redis:link $APP $APP
@@ -81,11 +81,10 @@ case "$1" in
   redis:info)
     REDIS_IMAGE=redis/$APP
     ID=$(docker ps -a | grep "$REDIS_IMAGE":latest |  awk '{print $1}')
-    IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
+    IP=$(docker inspect $ID | grep 'IPAddress"' | awk '{ print $2 }' | tr -d ',"')
     PORT=$(docker port $ID 6379 | cut -d":" -f2)
     echo
     echo "       Host: $IP"
-    echo "       Public port: $PORT"
     echo
     ;;
 
@@ -99,7 +98,7 @@ case "$1" in
         REDIS_IMAGE="redis/$3"
         ID=$(docker ps -a | grep "$REDIS_IMAGE":latest |  awk '{print $1}')
         if [[ -n "$ID" ]]; then
-            IP=$(docker inspect $ID | grep IPAddress | awk '{ print $2 }' | tr -d ',"')
+            IP=$(docker inspect $ID | grep 'IPAddress"' | awk '{ print $2 }' | tr -d ',"')
             # it seems like the dokku way of doing things is using dokku config:set to set environment variables, 
             # eg, not setting them via modifying the app's ENV file
             dokku config:set $APP "REDIS_URL=redis://$IP:6379" "REDIS_IP=$IP" "REDIS_PORT=6379"
